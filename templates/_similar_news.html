@@ -1,0 +1,15 @@
+{% for _, news in similar_news.iterrows() %}
+<div class="similar-news-card card mb-1" onclick="window.location.href='{{ news.link }}'">
+    <div class="card-body">
+        <h6 class="similar-news-title mb-1">{{ news.judul }}</h6>
+        <p class="text-muted mb-2 similar-news-content">
+            {{ news.content[:100] + '...' if news.content|length > 100 else news.content }}
+        </p>
+        <p class="similar-news-meta mb-0 small text-muted">
+            📅 {{ news.waktu }} &nbsp;|&nbsp; 
+            📰 {{ news.source }} &nbsp;|&nbsp; 
+            🔗 Similarity: {{ "%.4f"|format(news.similarity) }}
+        </p>
+    </div>
+</div>
+{% endfor %}
