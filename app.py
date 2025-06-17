@@ -197,13 +197,12 @@ def evaluate():
         # print("===")
 
         metrics_by_length[method][length_category]["nDCG@5"].append(ndcg_at_5)
-        metrics_by_length[method][length_category]["MAP@5"].append(average_precision)
         metrics_by_length[method][length_category]["P@5"].append(precision_at_5)
         metrics_by_length[method][length_category]["R@5"].append(recall_at_5)
 
     summary = []
     chart_labels = []
-    metric_names = ["nDCG@5", "MAP@5", "Precision@5", "Recall@5"]
+    metric_names = ["nDCG@5", "Precision@5", "Recall@5"]
     chart_data = {m: [] for m in metric_names}
     methods_set = set()
 
@@ -218,14 +217,12 @@ def evaluate():
                     "Method": method,
                     "Query Length": length_category,
                     "nDCG@5": np.mean(vals["nDCG@5"]),
-                    "MAP@5": np.mean(vals["MAP@5"]),
                     "Precision@5": np.mean(vals["P@5"]),
                     "Recall@5": np.mean(vals["R@5"]),
                 }
             )
 
             chart_data["nDCG@5"].append(np.mean(vals["nDCG@5"]))
-            chart_data["MAP@5"].append(np.mean(vals["MAP@5"]))
             chart_data["Precision@5"].append(np.mean(vals["P@5"]))
             chart_data["Recall@5"].append(np.mean(vals["R@5"]))
 
@@ -235,8 +232,7 @@ def evaluate():
     datasets = []
     colors = {
         "nDCG@5": "#2a4d69",
-        "MAP@5": "#98c1d9",
-        "Precision@5": "#e0fbfc",
+        "Precision@5": "#98c1d9",
         "Recall@5": "#ee6c4d",
     }
     for metric in metric_names:
