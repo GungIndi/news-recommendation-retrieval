@@ -9,34 +9,68 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">📰 News Recommendation</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                        <a class="nav-link" href="/"><i class="fas fa-search"></i> Search</a>
+                    </li>
+                    <li class="nav-item {% if request.endpoint == 'evaluate' %}active{% endif %}">
+                        <a class="nav-link" href="/evaluate"><i class="fas fa-chart-bar"></i> Evaluate</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
     <div class="container mt-5">
         <h1 class="title mb-4">📰 News Recommendation</h1>
 
         <form method="post" class="mb-4">
             <div class="form-row">
-                <div class="col-md-9 mb-2">
-                    <input type="text" class="form-control" name="query" placeholder="Masukkan kueri pencarian" value="{{ query }}" required>
-                </div>
-                <div class="col-md-0 mb-2">
-                  <input type="number" class="form-control" name="top_k" value="{{ top_k }}" min="1" max="20" title="Jumlah hasil pencarian (1-20)">
-                </div>
-                <div class="col-md-1 mb-2">
-                  <button type="submit" class="btn btn-primary px-3">
-                    <i class="fas fa-search"></i> Cari
-                  </button>
-                </div>
+              <div class="col-md-8 mb-2">
+                <input type="text" class="form-control search-query" name="query" placeholder="Masukkan kueri pencarian" value="{{ query }}" required>
+              </div>
+              <div class="col-md-2 mb-2">
+                <select class="form-control similarity-dropdown" name="similarity_type">
+                  <option value="combined_embedding" {% if similarity_type == "combined_embedding" %}selected{% endif %}>Gabungan</option>
+                  <option value="keywords_embedding" {% if similarity_type == "keywords_embedding" %}selected{% endif %}>Keyword</option>
+                  <option value="text_embedding" {% if similarity_type == "text_embedding" %}selected{% endif %}>Full Text</option>
+                </select>
+              </div>
+              <div class="col-md-1 mb-2">
+                <input type="number" class="form-control" name="top_k" value="{{ top_k }}" min="1" max="20" title="Jumlah hasil pencarian (1-20)">
+              </div>
+              <div class="col-md-1 mb-2">
+                <button type="submit" class="btn btn-primary btn-block">
+                  <i class="fas fa-search"></i> Cari
+                </button>
+              </div>
             </div>
-        </form>
-
+          </form>
+          
         {% if results is not none %}
-            <h4 class="mb-3">🔎 Hasil Pencarian:</h4>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0 medium">🔎 Hasil Pencarian:</h4>
+            {% if response_time %}
+                <small class="text-muted">
+                ⏱️ Waktu proses: {{ '%.3f' | format(response_time) }} detik
+                </small>
+            {% endif %}
+            </div>
+        
             {% if results.empty %}
-                <div class="alert alert-info">Tidak ada hasil yang ditemukan.</div>
+            <div class="alert alert-info">Tidak ada hasil yang ditemukan.</div>
             {% else %}
+      
               <div class="search-results">
                 {% for index, row in results.iterrows() %}
                 <div class="card mb-3 p-3 cursor-pointer" data-toggle="modal" data-target="#newsModal{{index}}">
-                  <h4 class="mb-2 text-primary">{{ row.judul }}</h4>
+                  <h4 class="mb-2">{{ row.judul }}</h4>
                   <p class="text-muted mb-2">
                       {{ row.content[:200] + '...' if row.content|length > 200 else row.content }}
                   </p>
@@ -104,7 +138,7 @@
               const newsTitle = $(this).find('.modal-title').text();
               
               $.get(`/similar-news/${newsId}`, function(data) {
-                  const container = $(`#similarNews${newsId}`);
+                  const container = $(`#similarNews${newsId}`);    
                   container.html(data);
               }).fail(function() {
                   $(`#similarNews${newsId}`).html(`
