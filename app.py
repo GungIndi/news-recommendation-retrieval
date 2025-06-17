@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import numpy as np
 import re
@@ -29,11 +29,11 @@ def preprocess_query(text):
 def classify_query_length(query):
     n_words = len(query.strip().split())
     if n_words <= 3:
-        return "short"
+        return "Short"
     elif n_words <= 6:
-        return "long"
+        return "Long"
     else:
-        return "extra_long"
+        return "Extra Long"
 
 
 def apk(actual, k=5):
@@ -206,29 +206,35 @@ def evaluate():
     chart_data = {m: [] for m in metric_names}
     methods_set = set()
 
+    label_map = {
+        "full_only": "Text Embedding",
+        "keyword_only": "Keyword Embedding",
+        "hybrid": "Combined Embedding",
+    }
+
     for method, length_dict in metrics_by_length.items():
         for length_category, vals in length_dict.items():
             methods_set.add(method)
-            label = f"{method} ({length_category})"
+            method_label = label_map.get(method)
+            label = f"{method_label} ({length_category})"
             chart_labels.append(label)
-
             summary.append(
                 {
-                    "Method": method,
+                    "Method": method_label,
                     "Query Length": length_category,
-                    "nDCG@5": np.mean(vals["nDCG@5"]),
-                    "Precision@5": np.mean(vals["P@5"]),
-                    "Recall@5": np.mean(vals["R@5"]),
+                    "nDCG@5": round(np.mean(vals["nDCG@5"]), 3),
+                    "Precision@5": round(np.mean(vals["P@5"]), 3),
+                    "Recall@5": round(np.mean(vals["R@5"]), 3),
                 }
             )
 
-            chart_data["nDCG@5"].append(np.mean(vals["nDCG@5"]))
-            chart_data["Precision@5"].append(np.mean(vals["P@5"]))
-            chart_data["Recall@5"].append(np.mean(vals["R@5"]))
+            chart_data["nDCG@5"].append(round(np.mean(vals["nDCG@5"]), 3))
+            chart_data["Precision@5"].append(round(np.mean(vals["P@5"]), 3))
+            chart_data["Recall@5"].append(round(np.mean(vals["R@5"]), 3))
 
     summary_df = pd.DataFrame(summary)
 
-    # Prepare datasets for chart.js
+    # Chart
     datasets = []
     colors = {
         "nDCG@5": "#2a4d69",
@@ -248,8 +254,71 @@ def evaluate():
     chart_payload = {"labels": chart_labels, "datasets": datasets}
 
     return render_template(
-        "evaluate.html", table=summary_df.to_html(index=False), chart_data=chart_payload
+        "evaluate.html",
+        table=summary_df.to_html(index=False),
+        chart_data=chart_payload,
     )
+
+
+@app.route("/execution-time-data")
+def execution_time_data():
+    with open("annotated_data_new.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    df_annot = pd.DataFrame(data)
+    df_annot = df_annot[df_annot["relevance_score"].notnull()]
+    df_annot["num_words"] = df_annot["query"].apply(lambda q: len(q.strip().split()))
+
+    unique_queries = df_annot["query"].unique()
+
+    timing_records = []
+    for query in unique_queries:
+        n_words = len(query.strip().split())
+
+        for method in ["keywords_embedding", "text_embedding", "combined_embedding"]:
+            start = time.perf_counter()
+            _, _ = get_top_matches(query, df.copy(), model, similarity_type=method)
+            elapsed = time.perf_counter() - start
+            timing_records.append(
+                {
+                    "Method": method,
+                    "Num Words": n_words,
+                    "Time": elapsed,
+                }
+            )
+
+    df_time = pd.DataFrame(timing_records)
+    avg_time = df_time.groupby(["Method", "Num Words"])["Time"].mean().reset_index()
+    label_nums = sorted(avg_time["Num Words"].dropna().astype(int).unique().tolist())
+    labels = [f"{num} words" for num in label_nums]
+    time_chart_data = {"labels": labels, "datasets": []}
+
+    color_map = {
+        "keywords_embedding": "#2a4d69",
+        "text_embedding": "#98c1d9",
+        "combined_embedding": "#ee6c4d",
+    }
+
+    for method in ["keywords_embedding", "text_embedding", "combined_embedding"]:
+        method_data = avg_time[avg_time["Method"] == method]
+        times = []
+        method_label = method.replace("_", " ").title()
+        for num in label_nums:
+            row = method_data[method_data["Num Words"] == num]
+            times.append(float(row["Time"].values[0]) if not row.empty else None)
+
+        time_chart_data["datasets"].append(
+            {
+                "label": method_label,
+                "data": times,
+                "borderColor": color_map[method],
+                "backgroundColor": color_map[method],
+                "fill": False,
+                "tension": 0.1,
+            }
+        )
+
+    return jsonify(time_chart_data)
 
 
 if __name__ == "__main__":

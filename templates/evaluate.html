@@ -33,9 +33,12 @@
   </nav>
   
     <div class="container mt-5">
-      <h1 class="title text-center mb-4">Evaluation Results</h1>
+      <h1 class="title text-center mb-4">Retrieval Evaluation Results</h1>
   
       <div class="card mb-4 p-3">
+        <h2 class="card-title text-center mb-3">
+          Retrieval Metrics Table
+        </h2>
         <!-- Table rendered from summary_df -->
         {{ table | safe }}
       </div>
@@ -46,6 +49,27 @@
         </h2>
         <canvas id="performanceChart" width="1000" height="500"></canvas>
       </div>
+
+      <div class="card p-4">
+        <h2 class="card-title text-center mb-3">
+          Execution Time Chart by Num Words
+        </h2>
+        <div class="text-center mb-3">
+          <button id="loadChartBtn" class="btn btn-primary">
+            Generate Execution Time Chart
+          </button>
+        </div>
+        <div id="loader" class="text-center mb-3" style="display: none;">
+          <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="sr-only">Loading...</span>
+          </div>
+          <p class="mt-2">Loading chart...</p>
+        </div>
+        <canvas id="timeChart" style="display: none;" width="800" height="400"></canvas>
+      </div>
+      
+      
+      
     </div>
   
     <script>
@@ -62,7 +86,7 @@
           responsive: true,
           plugins: {
             legend: {
-              position: 'bottom'
+              position: 'bottom',
             },
           },
           scales: {
@@ -73,7 +97,72 @@
           }
         }
       });
+
+      document.getElementById("loadChartBtn").addEventListener("click", function () {
+      const loader = document.getElementById("loader");
+      const canvas = document.getElementById("timeChart");
+      const btn = document.getElementById("loadChartBtn");
+      
+      loader.style.display = "block";
+      canvas.style.display = "none";
+      btn.style.display = "none";
+
+      fetch("/execution-time-data")
+        .then(response => response.json())
+        .then(data => {
+          loader.style.display = "none";
+          canvas.style.display = "block";
+              new Chart(canvas.getContext("2d"), {
+                  type: "line",
+                  data: data,
+                  options: {
+                      responsive: true,
+                      plugins: {
+                        legend: {
+                          position: 'bottom',
+                          usePointStyle: true,
+                          pointStyle: 'circle'
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: function(value) {
+                                const val = typeof value === 'object' && value.y !== undefined ? value.y : value;
+                                return parseFloat(val).toFixed(2);
+                            },
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                      },
+                      scales: {
+                          x: {
+                              title: {
+                                  display: true,
+                                  text: "Number of Words in Query"
+                              }
+                          },
+                          y: {
+                              title: {
+                                  display: true,
+                                  text: "Execution Time (seconds)"
+                              },
+                              // min: 0.4,
+                              // max: 1
+                          }
+                      }
+                  },
+                  plugins: [ChartDataLabels]
+              });
+          })
+          .catch(err => {
+              document.getElementById("loader").innerHTML = "<p>Error loading chart data.</p>";
+              console.error("Error loading time chart:", err);
+          });
+      });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
   </body>
   
 </html>

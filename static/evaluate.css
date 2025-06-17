@@ -4,6 +4,18 @@ body {
   font-family: "Segoe UI", sans-serif;
 }
 
+.btn-primary {
+  height: 90%;
+  background-color: #2a4d69 !important;
+  /* padding: 0.75rem 1.5rem !important; */
+  padding-bottom: 0.75rem !important;
+  border-radius: 8px;
+  font-weight: 500;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+
 .title {
   font-size: 2.5em;
   font-weight: bold;
