@@ -16,7 +16,6 @@ model = SentenceTransformer(
     "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 )
 df = pd.read_pickle("embedded_all.pkl")
-ground_truth = pd.read_csv("ground_truth.csv")
 
 
 # Preprocess input
